@@ -6,6 +6,7 @@ public class SessionData
 	private String userId;
 	private String userType;
 	private String username;
+	private String succesFlag;
 	public String getSessionId()
 	{
 		return sessionId;
@@ -38,6 +39,13 @@ public class SessionData
 	{
 		this.username = username;
 	}
-	
+	public void setSuccesFlag(String succesFlag) {
+		// TODO Auto-generated method stub
+		this.succesFlag = succesFlag;
+	}
+	public String getSuccesFlag()
+	{
+		return succesFlag;
+	}
 	
 }
