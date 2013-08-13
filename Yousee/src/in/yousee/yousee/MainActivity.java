@@ -1,13 +1,18 @@
 package in.yousee.yousee;
 
+import in.yousee.yousee.model.ProxyOpportunityItem;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ExpandableListView;
@@ -22,19 +27,21 @@ import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
 import com.actionbarsherlock.view.Window;
 
-public class MainActivity extends SherlockActivity
+public class MainActivity extends SherlockActivity implements OnItemClickListener
 {
 
 	private FrameLayout filterFrame;
 	private Button updateButton;
 	ListView listview;
- 
+	OpportunityListBuilder listBuilder;
+	ArrayList<ProxyOpportunityItem> proxyList;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
 
-		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
-		setSupportProgressBarIndeterminate(false);
+		// requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+		// setSupportProgressBarIndeterminate(false);
 		// setSupportProgressBarIndeterminate(true);
 		// requestWindowFeature(Window.FEATURE_PROGRESS);
 		// setSupportProgressBarVisibility(true);
@@ -47,37 +54,43 @@ public class MainActivity extends SherlockActivity
 		setUpdateButtonOnClickListener();
 
 		initiateExpandableList();
-		createOpportunityListView();
 
+		buildOpportunityListForTheFirstTime();
 		// sendRequest();
 		// sendTestRequest();
 	}
 
-	@Override
-	protected void onResume()
+	private void buildOpportunityListForTheFirstTime()
 	{
-		Log.i("tag", "onResume - progress bar has to be disappear");
-		super.onResume();
-	}
+		Log.i("tag", "building opportunity list");
+		listBuilder = new OpportunityListBuilder(this);
+		listBuilder.cook();
+	} 
 
-	private void createOpportunityListView()
+	public void createOpportunityListView(ArrayList<ProxyOpportunityItem> proxyList)
 	{
 
+		// Log.i("tag", "creating");
+		this.proxyList = proxyList;
 		listview = (ListView) findViewById(R.id.opportunityListview);
 
-		Log.i("tag", "before getting attributes");
+		String[] titles = new String[proxyList.size()];
+		int[] types = new int[proxyList.size()];
+		int index = 0;
+		Iterator it = proxyList.iterator();
+		while (it.hasNext())
+		{
+			ProxyOpportunityItem item = (ProxyOpportunityItem) it.next();
+			titles[index] = item.getTitle();
+			types[index] = item.getResourceOfCatagoryType();
+			index++;
 
-		Log.i("tag", "after getting attributes");
-		String[] titles = new String[7];
-		titles[0] = "Support Innovation through documentation - Documentation of UC projects reports";
-		titles[1] = "title 1.. a longer one. This title is just a longer and longer one. Text in this title has no meaning. Don't read it.. Thanks for reading.kj sdfjshdl fsdkfhsjkdh fudgjdfguid fgdf gdfg iudfgd g";
-		titles[2] = "It's a short title.";
-		titles[6] = "Organise Monthly Donation camp for Reusable and Recyclable items at your Office or Residential Community.";
-		titles[3] = "It's a longer title. But not as long as first title. Like first one, this title also doesn't mean anything";
-		titles[4] = "bla. bla. bla. bla. bla. bla. bla. bla. bla. bla. ";
-		titles[5] = "no more titles.. don't swipe down";
-		OpportunityListAdapter adapter = new OpportunityListAdapter(getApplicationContext(), titles);
+		}
+
+		OpportunityListAdapter adapter = new OpportunityListAdapter(getApplicationContext(), titles, types);
 		listview.setAdapter(adapter);
+		adapter.notifyDataSetChanged();
+		listview.setOnItemClickListener(this);
 
 	}
 
@@ -88,7 +101,7 @@ public class MainActivity extends SherlockActivity
 			@Override
 			public void onClick(View v)
 			{
-				Iterator<FilterGroupInfo> it = deptList.iterator();
+				Iterator<FilterGroupInfo> it = filterGroupList.iterator();
 				while (it.hasNext())
 				{
 					FilterGroupInfo group = it.next();
@@ -105,6 +118,9 @@ public class MainActivity extends SherlockActivity
 
 				}
 				showFilterMenu(false);
+				listBuilder = new OpportunityListBuilder(filterGroupList, MainActivity.this);
+				listBuilder.cook();
+				
 			}
 		});
 
@@ -144,8 +160,8 @@ public class MainActivity extends SherlockActivity
 
 	}
 
-	private LinkedHashMap<String, FilterGroupInfo> myDepartments = new LinkedHashMap<String, FilterGroupInfo>();
-	private ArrayList<FilterGroupInfo> deptList = new ArrayList<FilterGroupInfo>();
+	private LinkedHashMap<String, FilterGroupInfo> filterCatagories = new LinkedHashMap<String, FilterGroupInfo>();
+	private ArrayList<FilterGroupInfo> filterGroupList = new ArrayList<FilterGroupInfo>();
 
 	private FilterListAdapter listAdapter;
 	private ExpandableListView myList;
@@ -156,7 +172,7 @@ public class MainActivity extends SherlockActivity
 		myList = (ExpandableListView) findViewById(R.id.expandableListView1);
 		// setPadding();
 		// create the adapter by passing your ArrayList data
-		listAdapter = new FilterListAdapter(MainActivity.this, deptList);
+		listAdapter = new FilterListAdapter(MainActivity.this, filterGroupList);
 		// attach the adapter to the list
 		myList.setAdapter(listAdapter);
 
@@ -207,7 +223,6 @@ public class MainActivity extends SherlockActivity
 	// load some initial data into out list
 	private void loadData()
 	{
-
 		addProduct("Area", "Education");
 		addProduct("Area", "Environment");
 		addProduct("Area", "Health");
@@ -220,8 +235,8 @@ public class MainActivity extends SherlockActivity
 		addProduct("City", "Hyderabad");
 		addProduct("City", "Lucknow");
 
-		addProduct("Acivity Type", "Onsite");
-		addProduct("Acivity Type", "Offsite");
+		addProduct("Activity_Type", "Onsite");
+		addProduct("Activity_Type", "Offsite");
 
 	}
 
@@ -233,7 +248,7 @@ public class MainActivity extends SherlockActivity
 
 			Log.d("tag", "child is selected");
 			// get the group header
-			FilterGroupInfo headerInfo = deptList.get(groupPosition);
+			FilterGroupInfo headerInfo = filterGroupList.get(groupPosition);
 			// get the child info
 			FilterChildInfo detailInfo = headerInfo.getProductList().get(childPosition);
 			// display it or do something with it
@@ -252,7 +267,7 @@ public class MainActivity extends SherlockActivity
 		{
 
 			// get the group header
-			FilterGroupInfo headerInfo = deptList.get(groupPosition);
+			FilterGroupInfo headerInfo = filterGroupList.get(groupPosition);
 			// display it or do something with it
 			Toast.makeText(getBaseContext(), "Child on Header " + headerInfo.getName(), Toast.LENGTH_SHORT).show();
 
@@ -268,14 +283,14 @@ public class MainActivity extends SherlockActivity
 		int groupPosition = 0;
 
 		// check the hash map if the group already exists
-		FilterGroupInfo headerInfo = myDepartments.get(department);
+		FilterGroupInfo headerInfo = filterCatagories.get(department);
 		// add the group if doesn't exists
 		if (headerInfo == null)
 		{
 			headerInfo = new FilterGroupInfo();
 			headerInfo.setName(department);
-			myDepartments.put(department, headerInfo);
-			deptList.add(headerInfo);
+			filterCatagories.put(department, headerInfo);
+			filterGroupList.add(headerInfo);
 		}
 
 		// get the children for the group
@@ -283,7 +298,7 @@ public class MainActivity extends SherlockActivity
 		// size of the children list
 		int listSize = productList.size();
 		// add to the counter
-		listSize++; 
+		listSize++;
 
 		// create a new child and add that to the group
 		FilterChildInfo detailInfo = new FilterChildInfo();
@@ -293,7 +308,7 @@ public class MainActivity extends SherlockActivity
 		headerInfo.setProductList(productList);
 
 		// find the group position inside the list
-		groupPosition = deptList.indexOf(headerInfo);
+		groupPosition = filterGroupList.indexOf(headerInfo);
 		return groupPosition;
 	}
 
@@ -304,8 +319,22 @@ public class MainActivity extends SherlockActivity
 		getSupportMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
+
 	public void fancyThat(View v)
 	{
 		v.getBackground().setAlpha(50);
 	}
+
+	@Override
+	public void onItemClick(AdapterView<?> parent, View view, int position, long id)
+	{
+		Log.i("tag", "item clicked " + position);
+
+		Intent intent = new Intent();
+		intent.setClass(this, IndividualOpportunityItemActivity.class);
+		intent.putExtra("result", proxyList.get(position).toJsonString());
+		startActivity(intent);
+
+	}
+
 }
